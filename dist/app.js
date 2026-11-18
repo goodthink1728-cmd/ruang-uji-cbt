@@ -4,7 +4,7 @@ const safe=s=>String(s).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;
 const read=(k,d)=>{try{return JSON.parse(localStorage.getItem("ru."+k))??d}catch{return d}};
 const save=(k,v)=>localStorage.setItem("ru."+k,JSON.stringify(v));
 let school=read("school","");
-let configs=read("configs",[]),session=read("active",null),history=read("history",[]),page="beranda",stream,scanTimer,scanGeneration=0;
+let configs=read("configs",[]),session=read("active",null),history=read("history",[]),page="beranda",stream,scanTimer,scanGeneration=0,hideDemo=read("hide_demo",false);
 let studentData=read("student_profile",{name:"",email:"",class:""});
 let scannedConfig=null;
 const names={beranda:"Beranda",konfigurasi:"Konfigurasi",riwayat:"Riwayat"};
@@ -66,9 +66,9 @@ const studentOverview=()=>`
 </div>
 `;
 
-const overview=()=>'<section class="hero"><article><div class="kicker">RUANG PESERTA'+(school?' · '+safe(school):'')+'</div><h2>Siap untuk ujian?</h2><p>Masuk ke ruang ujian sekolah atau coba simulasi terlebih dahulu.</p>'+button("demo","▷ &nbsp; Coba simulasi","light")+'</article><img class="art" src="art.svg" alt=""></section><div class="sectionhead"><h2>Akses cepat</h2></div><div class="grid">'+[["url","link","Masukkan URL","Gunakan tautan ujian",""],["scan","qr","Pindai QR","Pindai kode pengawas","blue"],["file","file","Buka file CBT","Impor konfigurasi","orange"]].map(([a,i,t,s,c])=>'<button class="tile" data-act="'+a+'">'+icon(i,c)+'<span><b>'+t+'</b><small>'+s+'</small></span><span class="arr">↗</span></button>').join("")+'</div><div class="cols"><div class="panel"><h2>Ujian tersedia</h2>'+examRow(sample,"demo")+configs.slice(0,2).map((c,i)=>examRow(c,"run-"+i)).join("")+'</div><div class="panel"><h2>Kesiapan perangkat</h2>'+statusRow("Penyimpanan lokal","Aktif")+statusRow("Layar penuh",document.fullscreenEnabled?"Tersedia":"Opsional")+statusRow("Pemantauan fokus","Saat ujian")+'</div></div>';
+const overview=()=>'<section class="hero"><article><div class="kicker">RUANG PESERTA'+(school?' · '+safe(school):'')+'</div><h2>Siap untuk ujian?</h2><p>Masuk ke ruang ujian sekolah atau coba simulasi terlebih dahulu.</p>'+button("demo","▷ &nbsp; Coba simulasi","light")+'</article><img class="art" src="art.svg" alt=""></section><div class="sectionhead"><h2>Akses cepat</h2></div><div class="grid">'+[["url","link","Masukkan URL","Gunakan tautan ujian",""],["scan","qr","Pindai QR","Pindai kode pengawas","blue"],["file","file","Buka file CBT","Impor konfigurasi","orange"]].map(([a,i,t,s,c])=>'<button class="tile" data-act="'+a+'">'+icon(i,c)+'<span><b>'+t+'</b><small>'+s+'</small></span><span class="arr">↗</span></button>').join("")+'</div><div class="cols"><div class="panel"><h2>Ujian tersedia</h2>'+(!hideDemo?examRow(sample,"demo","demo"):"")+configs.map((c,i)=>examRow(c,"run-"+i,i)).join("")+(!configs.length&&hideDemo?'<p class="item">Belum ada ujian yang tersedia.</p>':'')+'</div><div class="panel"><h2>Kesiapan perangkat</h2>'+statusRow("Penyimpanan lokal","Aktif")+statusRow("Layar penuh",document.fullscreenEnabled?"Tersedia":"Opsional")+statusRow("Pemantauan fokus","Saat ujian")+'</div></div>';
 function statusRow(a,b){return '<div class="pair listrow"><span>'+a+'</span><span class="tag">'+b+'</span></div>'}
-function examRow(c,a){return '<div class="listrow">'+icon("book","blue")+'<div><b>'+safe(c.name)+'</b><small>'+c.minutes+' menit · '+(c.group?safe(c.group)+' · ':'')+(c.date?safe(c.date)+' · ':'')+(c.demo?"5 soal latihan":"Tautan sekolah")+'</small></div><span class="arr">'+button(a,"Mulai →")+'</span></div>'}
+function examRow(c,a,delKey){return '<div class="listrow">'+icon("book","blue")+'<div><b>'+safe(c.name)+'</b><small>'+c.minutes+' menit · '+(c.group?safe(c.group)+' · ':'')+(c.date?safe(c.date)+' · ':'')+(c.demo?"5 soal latihan":"Tautan sekolah")+'</small></div><span class="arr row">'+button(a,"Mulai →")+(delKey!==undefined?button("del-"+delKey,"Hapus","mini danger"):'')+'</span></div>'}
 function configPage(){return '<div class="panel"><div class="pair"><div><h2>Konfigurasi ujian</h2><p>Siapkan tautan dan durasi, lalu bagikan kepada peserta.</p></div>'+'<div class="row">'+button("school","Identitas sekolah")+button("new","+ Buat konfigurasi","primary")+'</div>'+'</div>'+(!configs.length?'<p class="item">Belum ada konfigurasi tersimpan di perangkat ini.</p>':configs.map((c,i)=>'<div class="item"><div><b>'+safe(c.name)+'</b><small>'+c.minutes+' menit</small></div><div class="arr row">'+button("run-"+i,"Mulai")+button("edit-"+i,"Ubah")+button("qr-"+i,"Kode QR")+button("out-"+i,"Ekspor .cbt")+button("del-"+i,"Hapus")+'</div></div>').join(""))+'</div>'}
 function historyPage(){return '<div class="panel"><h2>Riwayat perangkat ini</h2>'+(history.length?history.map(r=>'<div class="listrow">'+icon("check")+'<div><b>'+safe(r.name)+'</b><small>'+safe(r.person)+' · '+new Date(r.end).toLocaleString("id-ID")+'</small><small>'+safe(r.result)+' · Keluar fokus '+r.events+' kali</small></div></div>').join(""):'<p>Sesi yang selesai akan muncul di sini.</p>')+'</div>'}
 function native(action,data={}){window.NativeShell?.postMessage(JSON.stringify({action,...data}))}
@@ -205,8 +205,14 @@ function act(action){
     case "school":if(!isStudent){form("Identitas sekolah",field("Nama sekolah","name","text",'maxlength="80" value="'+safe(school)+'"'),"Simpan",f=>{school=f.get("name").trim();save("school",school);close();draw()});}break;
     case "new":if(!isStudent)editor();break;
     case "edit":if(!isStudent)editor(i);break;
-    case "del":if(!isStudent)popup("Hapus konfigurasi?",'<p>'+safe(configs[i].name)+'</p>'+button("remove-"+i,"Hapus"));break;
-    case "remove":if(!isStudent){configs.splice(i,1);save("configs",configs);close();draw();}break;
+    case "del":
+      if(idx==="demo"){popup("Hapus simulasi dari daftar?","<p>Simulasi literasi numerasi</p>"+button("remove-demo","Hapus","primary danger"));}
+      else if(!isStudent&&configs[i]){popup("Hapus konfigurasi ujian?","<p>"+safe(configs[i].name)+"</p>"+button("remove-"+i,"Hapus","primary danger"));}
+      break;
+    case "remove":
+      if(idx==="demo"){hideDemo=true;save("hide_demo",true);close();draw();}
+      else if(!isStudent&&configs[i]){configs.splice(i,1);save("configs",configs);close();draw();}
+      break;
     case "demo":if(!isStudent)start(sample);break;
     case "run":if(!isStudent)start(configs[i]);break;
     case "url":if(!isStudent)form("Masukkan URL ujian",field("Tautan sekolah","url","url",'placeholder="https://…"')+field("Durasi (menit)","min","number",'value="60" min="1" max="480"'),"Lanjut",f=>start({name:"Ujian sekolah",minutes:+f.get("min"),url:f.get("url")}));break;
