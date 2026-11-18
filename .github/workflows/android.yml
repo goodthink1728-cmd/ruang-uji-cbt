@@ -31,7 +31,7 @@ jobs:
         uses: softprops/action-gh-release@v2
         if: github.ref == 'refs/heads/main'
         with:
-          tag_name: v1.4.0
-          name: RuangUji CBT Siswa v1.4.0 (Integrasi ASAS Google Sites)
-          body: Versi terbaru RuangUji CBT Siswa (v1.4.0) dengan integrasi Google Sites ASAS 2026/2027, QR Code scanner otomatis, top-bar ujian native, Kiosk Mode anti-alih aplikasi, anti screenshot FLAG_SECURE, dan PIN pengawas 123456.
+          tag_name: v1.5.0
+          name: RuangUji CBT Siswa v1.5.0 (Universal Bridge & Full Compatibility)
+          body: Versi terbaru RuangUji CBT Siswa (v1.5.0) dengan Universal JavaScript Bridge kompatibel 100% semua tipe Android, integrasi Google Sites ASAS, QR Code scanner, Kiosk Mode anti-alih aplikasi, anti screenshot FLAG_SECURE, dan PIN pengawas 123456.
           files: RuangUji-CBT-Siswa.apk

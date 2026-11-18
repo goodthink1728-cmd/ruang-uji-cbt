@@ -147,11 +147,21 @@ public class MainActivity extends Activity {
                 return true;
             }
         });
+        // Universal JavaScript Interface bridge for 100% Android compatibility
+        web.addJavascriptInterface(new Object() {
+            @JavascriptInterface
+            public void postMessage(String json) {
+                runOnUiThread(() -> handleMessage(json));
+            }
+        }, "NativeShell");
+
         if (WebViewFeature.isFeatureSupported(WebViewFeature.WEB_MESSAGE_LISTENER)) {
-            WebViewCompat.addWebMessageListener(web, "NativeShell", Collections.singleton(ORIGIN),
-                (view, message, origin, mainFrame, reply) -> {
-                    if (mainFrame) handleMessage(message.getData());
-                });
+            try {
+                WebViewCompat.addWebMessageListener(web, "NativeShell", Collections.singleton(ORIGIN),
+                    (view, message, origin, mainFrame, reply) -> {
+                        if (mainFrame) runOnUiThread(() -> handleMessage(message.getData()));
+                    });
+            } catch (Exception ignored) {}
         }
 
         rootLayout.addView(web, new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, 0, 1.0f));
