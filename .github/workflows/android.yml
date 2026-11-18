@@ -31,7 +31,7 @@ jobs:
         uses: softprops/action-gh-release@v2
         if: github.ref == 'refs/heads/main'
         with:
-          tag_name: v1.1.0
-          name: RuangUji CBT Siswa v1.1.0 (Formulir Murni)
-          body: Versi terbaru RuangUji CBT Siswa (v1.1.0). Formulir khusus input Email, Nama Lengkap, Kelas, dan Pindai QR Code Pengawas. Seluruh opsi URL manual dan fitur admin telah ditiadakan.
+          tag_name: v1.2.0
+          name: RuangUji CBT Siswa v1.2.0 (Ikon Baru CBT Exambro Plus)
+          body: Versi terbaru RuangUji CBT Siswa (v1.2.0) dengan ikon resmi CBT Exambro Plus, favicon website, dan tampilan murni peserta ujian.
           files: RuangUji-CBT-Siswa.apk
