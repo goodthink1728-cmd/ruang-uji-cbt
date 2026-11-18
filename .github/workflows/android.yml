@@ -13,7 +13,8 @@ jobs:
           java-version: '17'
       - name: Setup Android SDK
         run: |
-          yes | sdkmanager --licenses || true
+          export PATH="$ANDROID_HOME/cmdline-tools/latest/bin:$ANDROID_HOME/platform-tools:$PATH"
+          echo "y" | sdkmanager --licenses || true
           sdkmanager "platforms;android-35" "build-tools;35.0.0"
       - uses: gradle/actions/setup-gradle@v4
         with:
