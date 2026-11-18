@@ -67,7 +67,7 @@ public class MainActivity extends Activity {
                     if (mainFrame) handleMessage(message.getData());
                 });
         }
-        web.loadUrl(ORIGIN + "/assets/index.html");
+        web.loadUrl(ORIGIN + "/assets/index.html?mode=student");
     }
     private void handleMessage(String json) {
         try {
