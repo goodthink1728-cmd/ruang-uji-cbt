@@ -31,7 +31,7 @@ jobs:
         uses: softprops/action-gh-release@v2
         if: github.ref == 'refs/heads/main'
         with:
-          tag_name: v1.2.0
-          name: RuangUji CBT Siswa v1.2.0 (Ikon Baru CBT Exambro Plus)
-          body: Versi terbaru RuangUji CBT Siswa (v1.2.0) dengan ikon resmi CBT Exambro Plus, favicon website, dan tampilan murni peserta ujian.
+          tag_name: v1.3.0
+          name: RuangUji CBT Siswa v1.3.0 (Kiosk Lockdown Anti-Switch)
+          body: Versi terbaru RuangUji CBT Siswa (v1.3.0) dengan fitur Kiosk Mode ketat, anti-alih aplikasi otomatis, anti screenshot FLAG_SECURE, dan proteksi PIN pengawas.
           files: RuangUji-CBT-Siswa.apk
