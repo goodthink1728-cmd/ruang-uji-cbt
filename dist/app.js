@@ -1,4 +1,4 @@
-import {sample,questions,validate,pack,unpack,encode,tokenHash} from "./core.js";
+import {sample,questions,validate,pack,unpack,encode,tokenHash} from "./core.js?v=1.1";
 const $=q=>document.querySelector(q),view=$("#view"),modal=$("#modal"),body=$("#modalBody");
 const safe=s=>String(s).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
 const read=(k,d)=>{try{return JSON.parse(localStorage.getItem("ru."+k))??d}catch{return d}};
