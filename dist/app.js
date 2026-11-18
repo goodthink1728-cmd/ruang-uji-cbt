@@ -53,13 +53,6 @@ const studentOverview=()=>`
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3h7v7H3zM14 3h7v7h-7zM3 14h7v7H3zm11 0h3v3h4v4h-7z"/><path d="M7 7h.01M17 7h.01M7 17h.01"/></svg>
         <span>${scannedConfig?"📷 Pindai Ulang QR Code":"📷 Pindai QR Code Pengawas"}</span>
       </button>
-      <details class="manual-url-details">
-        <summary>Atau masukkan URL / Token Ujian manual</summary>
-        <div class="manual-url-inputs">
-          <input type="url" id="std_manual_url" placeholder="https://forms.gle/... atau link ujian sekolah" value="${scannedConfig?.url?safe(scannedConfig.url):''}">
-          <input type="password" id="std_token" placeholder="Token ujian (jika ada)">
-        </div>
-      </details>
     </div>
     <p id="studentFormError" class="error" role="alert" style="margin:0"></p>
     <button type="submit" class="submit-exam-btn">
@@ -174,25 +167,26 @@ document.addEventListener("submit",async e=>{
     const name=$("#std_name").value.trim();
     const email=$("#std_email").value.trim();
     const cls=$("#std_class").value.trim();
-    const manualUrl=$("#std_manual_url")?.value?.trim();
-    const tokenInput=$("#std_token")?.value?.trim();
     
     if(!name){errBox.textContent="Nama lengkap wajib diisi.";return}
     if(!email){errBox.textContent="Alamat email wajib diisi.";return}
     if(!cls){errBox.textContent="Kelas wajib diisi.";return}
     
-    let config=scannedConfig;
-    if(!config && manualUrl){
-      try{config=validate({name:"Ujian "+cls,url:manualUrl,minutes:60})}catch(ex){errBox.textContent=ex.message;return}
-    }
-    if(!config){
-      errBox.textContent="Silakan pindai Kode QR dari pengawas terlebih dahulu (atau masukkan URL ujian).";
+    if(!scannedConfig){
+      errBox.textContent="Silakan pindai Kode QR dari pengawas terlebih dahulu.";
       return;
     }
+    const config=scannedConfig;
     if(config.token){
-      if(!tokenInput){errBox.textContent="Ujian ini membutuhkan token. Masukkan token dari pengawas.";return}
-      const hashed=await tokenHash(tokenInput,config.token.split(":")[0]);
-      if(hashed!==config.token){errBox.textContent="Token ujian salah. Minta token ke pengawas.";return}
+      form("Token Ujian",field("Masukkan token dari pengawas","token","password"),"Lanjut",async f=>{
+        const tokenInput=f.get("token")?.trim();
+        const hashed=await tokenHash(tokenInput,config.token.split(":")[0]);
+        if(hashed!==config.token)throw Error("Token ujian salah. Minta token ke pengawas.");
+        close();
+        saveStudentInputs();
+        start(config,{name,email,class:cls});
+      });
+      return;
     }
     errBox.textContent="";
     saveStudentInputs();
