@@ -1,7 +1,7 @@
 name: Build APK Android
 on: [workflow_dispatch, push]
 permissions:
-  contents: read
+  contents: write
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -21,7 +21,17 @@ jobs:
           gradle-version: '8.9'
       - name: Build APK
         run: gradle -p android assembleDebug
+      - name: Prepare APK Asset
+        run: cp android/app/build/outputs/apk/debug/app-debug.apk RuangUji-CBT-Siswa.apk
       - uses: actions/upload-artifact@v4
         with:
           name: RuangUji-APK-debug
-          path: android/app/build/outputs/apk/debug/*.apk
+          path: RuangUji-CBT-Siswa.apk
+      - name: Publish to GitHub Release
+        uses: softprops/action-gh-release@v2
+        if: github.ref == 'refs/heads/main'
+        with:
+          tag_name: v1.0.0
+          name: RuangUji CBT Siswa v1.0.0
+          body: Rilis resmi Aplikasi Android RuangUji CBT Exambro khusus Siswa. Unduh file APK di bawah ini dan pasang pada HP murid.
+          files: RuangUji-CBT-Siswa.apk
