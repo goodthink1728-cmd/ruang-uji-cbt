@@ -5,15 +5,22 @@ import android.app.ActivityManager;
 import android.app.AlertDialog;
 import android.content.Context;
 import android.content.Intent;
+import android.graphics.Color;
+import android.graphics.Typeface;
 import android.media.Ringtone;
 import android.media.RingtoneManager;
 import android.net.Uri;
 import android.os.Bundle;
+import android.os.CountDownTimer;
 import android.print.PrintManager;
+import android.text.InputType;
+import android.util.TypedValue;
+import android.view.Gravity;
 import android.view.View;
+import android.view.ViewGroup;
 import android.view.WindowManager;
 import android.webkit.*;
-import android.widget.Toast;
+import android.widget.*;
 import androidx.webkit.WebViewAssetLoader;
 import androidx.webkit.WebViewCompat;
 import androidx.webkit.WebViewFeature;
@@ -28,32 +35,92 @@ public class MainActivity extends Activity {
     private static final String ORIGIN = "https://appassets.androidplatform.net";
     private static final int OPEN = 11, SAVE = 12;
     private WebView web;
+    private LinearLayout rootLayout;
+    private LinearLayout topBar;
+    private TextView txtExamTitle;
+    private TextView txtStudentInfo;
+    private TextView txtTimer;
+    private Button btnFinish;
+    private CountDownTimer examTimer;
+
     private String pending;
     private ValueCallback<Uri[]> fileCallback;
     private boolean isExamActive = false;
 
+    private int dp(int value) {
+        return (int) TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, value, getResources().getDisplayMetrics());
+    }
+
     @Override
     public void onCreate(Bundle state) {
         super.onCreate(state);
-        // Anti screenshot, screen recording, and app switcher preview
         getWindow().addFlags(WindowManager.LayoutParams.FLAG_SECURE);
-        // Keep screen on during exam
         getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
 
         if (state != null) pending = state.getString("pending");
+
+        rootLayout = new LinearLayout(this);
+        rootLayout.setOrientation(LinearLayout.VERTICAL);
+        rootLayout.setBackgroundColor(Color.WHITE);
+
+        // TopBar for Exam Mode
+        topBar = new LinearLayout(this);
+        topBar.setOrientation(LinearLayout.HORIZONTAL);
+        topBar.setBackgroundColor(0xFF102E4E); // Deep navy
+        topBar.setPadding(dp(14), dp(8), dp(14), dp(8));
+        topBar.setGravity(Gravity.CENTER_VERTICAL);
+        topBar.setVisibility(View.GONE);
+
+        // Info container (Title + Student)
+        LinearLayout infoContainer = new LinearLayout(this);
+        infoContainer.setOrientation(LinearLayout.VERTICAL);
+        LinearLayout.LayoutParams infoParams = new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1.0f);
+        infoContainer.setLayoutParams(infoParams);
+
+        txtExamTitle = new TextView(this);
+        txtExamTitle.setTextColor(Color.WHITE);
+        txtExamTitle.setTextSize(TypedValue.COMPLEX_UNIT_SP, 14);
+        txtExamTitle.setTypeface(Typeface.DEFAULT_BOLD);
+        txtExamTitle.setText("ASAS 2026/2027");
+        infoContainer.addView(txtExamTitle);
+
+        txtStudentInfo = new TextView(this);
+        txtStudentInfo.setTextColor(0xFFD2E3F0);
+        txtStudentInfo.setTextSize(TypedValue.COMPLEX_UNIT_SP, 12);
+        infoContainer.addView(txtStudentInfo);
+
+        topBar.addView(infoContainer);
+
+        // Timer
+        txtTimer = new TextView(this);
+        txtTimer.setTextColor(Color.WHITE);
+        txtTimer.setTextSize(TypedValue.COMPLEX_UNIT_SP, 14);
+        txtTimer.setTypeface(Typeface.MONOSPACE, Typeface.BOLD);
+        txtTimer.setPadding(dp(8), 0, dp(12), 0);
+        topBar.addView(txtTimer);
+
+        // Finish button
+        btnFinish = new Button(this);
+        btnFinish.setText("Akhiri Sesi");
+        btnFinish.setTextColor(Color.WHITE);
+        btnFinish.setTextSize(TypedValue.COMPLEX_UNIT_SP, 12);
+        btnFinish.setBackgroundColor(0xFFDC2626); // Alert Red
+        btnFinish.setPadding(dp(12), dp(4), dp(12), dp(4));
+        btnFinish.setOnClickListener(v -> promptFinishExam());
+        topBar.addView(btnFinish);
+
+        rootLayout.addView(topBar, new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
+
+        // WebView
         web = new WebView(this);
-        web.setOnApplyWindowInsetsListener((v, insets) -> {
-            v.setPadding(insets.getSystemWindowInsetLeft(), insets.getSystemWindowInsetTop(),
-                    insets.getSystemWindowInsetRight(), insets.getSystemWindowInsetBottom());
-            return insets;
-        });
-        setContentView(web);
         WebSettings settings = web.getSettings();
         settings.setJavaScriptEnabled(true);
         settings.setDomStorageEnabled(true);
         settings.setAllowFileAccess(false);
         settings.setAllowContentAccess(true);
+        settings.setDatabaseEnabled(true);
         settings.setCacheMode(WebSettings.LOAD_NO_CACHE);
+        settings.setUserAgentString(settings.getUserAgentString() + " Chrome/120.0.0.0 RuangUjiCBT/1.3");
         web.clearCache(true);
 
         WebViewAssetLoader assets = new WebViewAssetLoader.Builder()
@@ -64,8 +131,11 @@ public class MainActivity extends Activity {
             }
             @Override public boolean shouldOverrideUrlLoading(WebView view, WebResourceRequest request) {
                 Uri uri = request.getUrl();
-                if (!"https".equals(uri.getScheme())) return true;
-                return request.isForMainFrame() && !uri.toString().startsWith(ORIGIN + "/assets/index.html");
+                String scheme = uri.getScheme();
+                if ("https".equals(scheme) || "http".equals(scheme)) {
+                    return false; // Load inside WebView, don't open external browser!
+                }
+                return true;
             }
         });
         web.setWebChromeClient(new WebChromeClient() {
@@ -83,6 +153,10 @@ public class MainActivity extends Activity {
                     if (mainFrame) handleMessage(message.getData());
                 });
         }
+
+        rootLayout.addView(web, new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, 0, 1.0f));
+        setContentView(rootLayout);
+
         hideSystemUI();
         web.loadUrl(ORIGIN + "/assets/index.html?mode=student");
     }
@@ -110,7 +184,6 @@ public class MainActivity extends Activity {
         if (hasFocus) {
             hideSystemUI();
         } else if (isExamActive) {
-            // Collapse notification drawer if pulled down
             try {
                 Object service = getSystemService("statusbar");
                 Class<?> statusbarManager = Class.forName("android.app.StatusBarManager");
@@ -118,7 +191,6 @@ public class MainActivity extends Activity {
                 collapse.invoke(service);
             } catch (Exception ignored) {}
 
-            // Force app back to front immediately
             bringToFront();
             playWarningSound();
             Toast.makeText(this, "PERINGATAN: Dilarang beralih ke aplikasi lain saat ujian!", Toast.LENGTH_LONG).show();
@@ -150,13 +222,83 @@ public class MainActivity extends Activity {
         } catch (Exception ignored) {}
     }
 
+    private void startNativeTimer(int totalSeconds) {
+        if (examTimer != null) examTimer.cancel();
+        examTimer = new CountDownTimer(totalSeconds * 1000L, 1000) {
+            @Override
+            public void onTick(long millisUntilFinished) {
+                long sec = millisUntilFinished / 1000;
+                long m = sec / 60;
+                long s = sec % 60;
+                txtTimer.setText(String.format("%02d:%02d", m, s));
+            }
+            @Override
+            public void onFinish() {
+                txtTimer.setText("00:00");
+                Toast.makeText(MainActivity.this, "Waktu ujian telah habis!", Toast.LENGTH_LONG).show();
+            }
+        }.start();
+    }
+
+    private void promptFinishExam() {
+        final EditText input = new EditText(this);
+        input.setHint("PIN Pengawas (default: 123456)");
+        input.setInputType(InputType.TYPE_CLASS_NUMBER | InputType.TYPE_NUMBER_VARIATION_PASSWORD);
+        new AlertDialog.Builder(this)
+            .setTitle("Akhiri Sesi Ujian")
+            .setMessage("Pastikan seluruh jawaban telah terkirim. Minta pengawas memasukkan PIN untuk keluar:")
+            .setView(input)
+            .setNegativeButton("Batal", null)
+            .setPositiveButton("Selesai & Keluar", (dialog, which) -> {
+                String pin = input.getText().toString().trim();
+                if ("123456".equals(pin)) {
+                    stopExamSession();
+                } else {
+                    Toast.makeText(this, "PIN Pengawas salah! Minta bantuan pengawas.", Toast.LENGTH_SHORT).show();
+                }
+            })
+            .show();
+    }
+
+    private void stopExamSession() {
+        isExamActive = false;
+        if (examTimer != null) {
+            examTimer.cancel();
+            examTimer = null;
+        }
+        topBar.setVisibility(View.GONE);
+        ActivityManager am = (ActivityManager) getSystemService(ACTIVITY_SERVICE);
+        if (am != null && am.getLockTaskModeState() != ActivityManager.LOCK_TASK_MODE_NONE) {
+            try { stopLockTask(); } catch (Exception ignored) {}
+        }
+        web.loadUrl(ORIGIN + "/assets/index.html?mode=student");
+        Toast.makeText(this, "Sesi ujian berhasil diselesaikan.", Toast.LENGTH_LONG).show();
+    }
+
     private void handleMessage(String json) {
         try {
             JSONObject data = new JSONObject(json);
             switch (data.getString("action")) {
                 case "scan":
                     new IntentIntegrator(this).setDesiredBarcodeFormats(IntentIntegrator.QR_CODE)
-                        .setPrompt("Pindai kode QR ujian dari pengawas").setBeepEnabled(false).initiateScan();
+                        .setPrompt("Arahkan kamera ke Kode QR Ujian ASAS").setBeepEnabled(false).initiateScan();
+                    break;
+                case "startExam":
+                    String url = data.getString("url");
+                    String name = data.optString("name", "ASAS 2026/2027");
+                    String person = data.optString("person", "");
+                    String group = data.optString("class", "");
+                    int minutes = data.optInt("minutes", 90);
+
+                    isExamActive = true;
+                    try { startLockTask(); } catch (Exception ignored) {}
+                    hideSystemUI();
+
+                    txtExamTitle.setText(name);
+                    txtStudentInfo.setText(person + (group.isEmpty() ? "" : " · " + group));
+                    topBar.setVisibility(View.VISIBLE);
+                    startNativeTimer(minutes * 60);
+                    web.loadUrl(url); // Directly loads Google Sites top-level, bypasses X-Frame-Options!
                     break;
                 case "print":
                     ((PrintManager)getSystemService(PRINT_SERVICE)).print("Kartu ujian", web.createPrintDocumentAdapter("Kartu ujian"), null);
@@ -168,10 +310,7 @@ public class MainActivity extends Activity {
                         try { startLockTask(); } catch (Exception ignored) {}
                         hideSystemUI();
                     } else {
-                        ActivityManager am = (ActivityManager)getSystemService(ACTIVITY_SERVICE);
-                        if (am != null && am.getLockTaskModeState() != ActivityManager.LOCK_TASK_MODE_NONE) {
-                            try { stopLockTask(); } catch (Exception ignored) {}
-                        }
+                        stopExamSession();
                     }
                     break;
                 case "pin":
@@ -210,8 +349,7 @@ public class MainActivity extends Activity {
     @Override
     public void onBackPressed() {
         if (isExamActive) {
-            Toast.makeText(this, "Aplikasi terkunci. Minta pengawas memasukkan PIN untuk mengakhiri ujian.", Toast.LENGTH_SHORT).show();
-            web.evaluateJavascript("document.querySelector('[data-act=finish]')?.click()", null);
+            promptFinishExam();
             return;
         }
         new AlertDialog.Builder(this)

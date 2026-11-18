@@ -49,7 +49,7 @@ const studentOverview=()=>`
       <label>Kode Ujian (QR Code Pengawas)</label>
       <div id="qrStatusBox" class="qr-status-box ${scannedConfig?'qr-ready':''}">
         ${scannedConfig?
-          '<div class="qr-badge">✅ Terdeteksi</div><div class="qr-info"><b>'+safe(scannedConfig.name)+'</b><small>'+scannedConfig.minutes+' Menit · '+(scannedConfig.group?safe(scannedConfig.group):'Semua Kelas')+'</small></div>':
+          '<div class="qr-badge">✅ Terdeteksi</div><div class="qr-info"><b>'+safe(scannedConfig.name)+'</b><small>'+scannedConfig.minutes+' Menit · '+(scannedConfig.group?safe(scannedConfig.group):'Semua Kelas')+'</small><small style="color:#1d4ed8;font-weight:600;word-break:break-all;display:block;margin-top:2px;">🔗 '+safe(scannedConfig.url)+'</small></div>':
           '<div class="qr-info"><small>Belum ada kode ujian. Tekan tombol di bawah untuk memindai QR pengawas.</small></div>'}
       </div>
       <button type="button" class="scan-button-primary" data-act="scan">
@@ -121,7 +121,30 @@ function tick(){if(!session)return;const n=Math.ceil((session.deadline-Date.now(
 setInterval(tick,500);document.addEventListener("visibilitychange",()=>{if(!session)return;if(document.hidden){session.events++;save("active",session);$("#events").textContent="Keluar fokus "+session.events+" kali"}else tick()});
 view.onchange=e=>{if(session&&e.target.name==="answer"){session.answers[session.index]=Number(e.target.value);save("active",session)}};
 function qr(c){const u=new URL(location.href);u.hash="ujian="+encode(new TextEncoder().encode(JSON.stringify(c)));const value=u.origin==="https://appassets.androidplatform.net"?"ruanguji:"+u.hash.slice(7):u.href;popup("Kode QR ujian",'<p>'+safe(c.name)+' · '+c.minutes+' menit</p><canvas aria-label="Kode QR ujian"></canvas><p>Pindai dari menu Pindai QR.</p>'+button("print","Cetak / simpan PDF"));const code=new QRCode(-1,1);try{code.addData(value);code.make()}catch{body.querySelector(".error").textContent="Tautan terlalu panjang untuk QR. Gunakan ekspor file.";return}const n=code.getModuleCount(),canvas=body.querySelector("canvas");canvas.width=canvas.height=(n+8)*6;canvas.style.width="290px";const ctx=canvas.getContext("2d");ctx.fillStyle="white";ctx.fillRect(0,0,canvas.width,canvas.height);ctx.fillStyle="#10293e";for(let y=0;y<n;y++)for(let x=0;x<n;x++)if(code.isDark(y,x))ctx.fillRect((x+4)*6,(y+4)*6,6,6)}
-function parseQR(raw){let payload;if(raw.startsWith("ruanguji:"))payload=raw.slice(9);else{const u=new URL(raw);if(u.hash.startsWith("#ujian="))payload=u.hash.slice(7);else return validate({name:"Ujian dari QR",url:raw,minutes:60})}return validate(JSON.parse(new TextDecoder().decode(Uint8Array.from(atob(payload),c=>c.charCodeAt(0)))))}
+function parseQR(raw){
+  if(!raw) throw Error("Kode QR kosong.");
+  const trimmed = String(raw).trim();
+  if(trimmed.includes("sites.google.com/view/asas2026-2027") || trimmed.includes("asas2026-2027") || trimmed.includes("halaman-muka")){
+    return validate({name:"ASAS 2026/2027",url:"https://sites.google.com/view/asas2026-2027/halaman-muka",minutes:90,group:"Semua Kelas"});
+  }
+  let payload;
+  if(trimmed.startsWith("ruanguji:")) {
+    payload=trimmed.slice(9);
+  } else {
+    try {
+      const u=new URL(trimmed);
+      if(u.hash.startsWith("#ujian=")) payload=u.hash.slice(7);
+      else return validate({name:"ASAS 2026/2027",url:trimmed.startsWith("http")?trimmed:"https://sites.google.com/view/asas2026-2027/halaman-muka",minutes:90,group:"Semua Kelas"});
+    } catch {
+      return validate({name:"ASAS 2026/2027",url:"https://sites.google.com/view/asas2026-2027/halaman-muka",minutes:90,group:"Semua Kelas"});
+    }
+  }
+  try {
+    return validate(JSON.parse(new TextDecoder().decode(Uint8Array.from(atob(payload),c=>c.charCodeAt(0)))));
+  } catch {
+    return validate({name:"ASAS 2026/2027",url:"https://sites.google.com/view/asas2026-2027/halaman-muka",minutes:90,group:"Semua Kelas"});
+  }
+}
 window.ruangScanResult=raw=>{
   try{
     scannedConfig=parseQR(raw);
@@ -187,12 +210,32 @@ document.addEventListener("submit",async e=>{
         if(hashed!==config.token)throw Error("Token ujian salah. Minta token ke pengawas.");
         close();
         saveStudentInputs();
+        if(window.NativeShell){
+          native("startExam",{
+            url: config.url,
+            name: config.name,
+            person: name,
+            class: cls,
+            minutes: config.minutes || 90
+          });
+          return;
+        }
         start(config,{name,email,class:cls});
       });
       return;
     }
     errBox.textContent="";
     saveStudentInputs();
+    if(window.NativeShell){
+      native("startExam",{
+        url: config.url,
+        name: config.name,
+        person: name,
+        class: cls,
+        minutes: config.minutes || 90
+      });
+      return;
+    }
     start(config,{name,email,class:cls});
   }
 });
