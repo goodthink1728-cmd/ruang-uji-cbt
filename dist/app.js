@@ -70,7 +70,7 @@ const overview=()=>'<section class="hero"><article><div class="kicker">RUANG PES
 function statusRow(a,b){return '<div class="pair listrow"><span>'+a+'</span><span class="tag">'+b+'</span></div>'}
 function examRow(c,a,delKey){return '<div class="listrow">'+icon("book","blue")+'<div><b>'+safe(c.name)+'</b><small>'+c.minutes+' menit · '+(c.group?safe(c.group)+' · ':'')+(c.date?safe(c.date)+' · ':'')+(c.demo?"5 soal latihan":"Tautan sekolah")+'</small></div><span class="arr row">'+button(a,"Mulai →")+(delKey!==undefined?button("del-"+delKey,"Hapus","mini danger"):'')+'</span></div>'}
 function configPage(){return '<div class="panel"><div class="pair"><div><h2>Konfigurasi ujian</h2><p>Siapkan tautan dan durasi, lalu bagikan kepada peserta.</p></div>'+'<div class="row">'+button("school","Identitas sekolah")+button("new","+ Buat konfigurasi","primary")+'</div>'+'</div>'+(!configs.length?'<p class="item">Belum ada konfigurasi tersimpan di perangkat ini.</p>':configs.map((c,i)=>'<div class="item"><div><b>'+safe(c.name)+'</b><small>'+c.minutes+' menit</small></div><div class="arr row">'+button("run-"+i,"Mulai")+button("edit-"+i,"Ubah")+button("qr-"+i,"Kode QR")+button("out-"+i,"Ekspor .cbt")+button("del-"+i,"Hapus")+'</div></div>').join(""))+'</div>'}
-function historyPage(){return '<div class="panel"><h2>Riwayat perangkat ini</h2>'+(history.length?history.map(r=>'<div class="listrow">'+icon("check")+'<div><b>'+safe(r.name)+'</b><small>'+safe(r.person)+' · '+new Date(r.end).toLocaleString("id-ID")+'</small><small>'+safe(r.result)+' · Keluar fokus '+r.events+' kali</small></div></div>').join(""):'<p>Sesi yang selesai akan muncul di sini.</p>')+'</div>'}
+function historyPage(){return '<div class="panel"><div class="pair" style="margin-bottom:14px"><div><h2>Riwayat perangkat ini</h2><p style="color:#62798e;font-size:13px">Daftar rekap sesi ujian yang telah selesai pada perangkat ini.</p></div>'+(history.length?'<div class="row">'+button("clearallhistory","Hapus Semua Riwayat","mini danger")+'</div>':'')+'</div>'+(history.length?history.map((r,i)=>'<div class="listrow">'+icon("check")+'<div><b>'+safe(r.name)+'</b><small>'+safe(r.person)+' · '+new Date(r.end).toLocaleString("id-ID")+'</small><small>'+safe(r.result)+' · Keluar fokus '+r.events+' kali</small></div><span class="arr">'+button("delhist-"+i,"Hapus","mini danger")+'</span></div>').join(""):'<p class="item">Belum ada riwayat sesi ujian yang tersimpan.</p>')+'</div>'}
 function native(action,data={}){window.NativeShell?.postMessage(JSON.stringify({action,...data}))}
 function draw(){
   if(isStudent && page==="konfigurasi") page="beranda";
@@ -212,6 +212,18 @@ function act(action){
     case "remove":
       if(idx==="demo"){hideDemo=true;save("hide_demo",true);close();draw();}
       else if(!isStudent&&configs[i]){configs.splice(i,1);save("configs",configs);close();draw();}
+      break;
+    case "delhist":
+      popup("Hapus riwayat ini?",'<p>'+safe(history[i]?.name||"Riwayat")+' - '+safe(history[i]?.person||"")+'</p>'+button("confirmdelhist-"+i,"Hapus","primary danger"));
+      break;
+    case "confirmdelhist":
+      history.splice(i,1);save("history",history);close();draw();
+      break;
+    case "clearallhistory":
+      popup("Hapus semua riwayat?",'<p>Semua data riwayat ujian ('+history.length+' data) pada perangkat ini akan dihapus secara permanen.</p>'+button("confirmclearallhist","Ya, Hapus Semua","primary danger"));
+      break;
+    case "confirmclearallhist":
+      history=[];save("history",history);close();draw();
       break;
     case "demo":if(!isStudent)start(sample);break;
     case "run":if(!isStudent)start(configs[i]);break;
