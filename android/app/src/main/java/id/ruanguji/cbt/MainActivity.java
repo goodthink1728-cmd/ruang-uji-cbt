@@ -167,11 +167,11 @@ public class MainActivity extends Activity {
         rootLayout.addView(web, new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, 0, 1.0f));
         setContentView(rootLayout);
 
-        hideSystemUI();
         web.loadUrl(ORIGIN + "/assets/index.html?mode=student");
     }
 
     private void hideSystemUI() {
+        if (!isExamActive) return; // Only hide system UI during active exam, prevents flicker on form
         getWindow().getDecorView().setSystemUiVisibility(
             View.SYSTEM_UI_FLAG_IMMERSIVE_STICKY
             | View.SYSTEM_UI_FLAG_LAYOUT_STABLE
@@ -185,15 +185,18 @@ public class MainActivity extends Activity {
     @Override
     protected void onResume() {
         super.onResume();
-        hideSystemUI();
+        if (isExamActive) {
+            hideSystemUI();
+        }
     }
 
     @Override
     public void onWindowFocusChanged(boolean hasFocus) {
         super.onWindowFocusChanged(hasFocus);
+        if (!isExamActive) return;
         if (hasFocus) {
             hideSystemUI();
-        } else if (isExamActive) {
+        } else {
             try {
                 Object service = getSystemService("statusbar");
                 Class<?> statusbarManager = Class.forName("android.app.StatusBarManager");
@@ -203,7 +206,7 @@ public class MainActivity extends Activity {
 
             bringToFront();
             playWarningSound();
-            Toast.makeText(this, "PERINGATAN: Dilarang beralih ke aplikasi lain saat ujian!", Toast.LENGTH_LONG).show();
+            Toast.makeText(this, "PERINGATAN: Dilarang beralih ke aplikasi lain saat ujian!", Toast.LENGTH_SHORT).show();
         }
     }
 
@@ -271,6 +274,7 @@ public class MainActivity extends Activity {
     }
 
     private void stopExamSession() {
+        if (!isExamActive) return; // Prevent infinite reload loop if exam is not active
         isExamActive = false;
         if (examTimer != null) {
             examTimer.cancel();
@@ -314,12 +318,12 @@ public class MainActivity extends Activity {
                     ((PrintManager)getSystemService(PRINT_SERVICE)).print("Kartu ujian", web.createPrintDocumentAdapter("Kartu ujian"), null);
                     break;
                 case "session":
-                    boolean active = data.getBoolean("active");
-                    isExamActive = active;
-                    if (active) {
+                    boolean active = data.optBoolean("active", false);
+                    if (active && !isExamActive) {
+                        isExamActive = true;
                         try { startLockTask(); } catch (Exception ignored) {}
                         hideSystemUI();
-                    } else {
+                    } else if (!active && isExamActive) {
                         stopExamSession();
                     }
                     break;
